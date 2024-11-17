@@ -1,0 +1,152 @@
+# Storage Account container URL that has the DSC components
+DscArtifactsLocation: https://staavdterraformfiles.blob.core.windows.net/dsc
+# SAS token to access the storage account - will be filled in with token replacement task in the pipeline via a secure variable in variable group
+DscArtifactsSasToken: '{{dscArtifactsSasToken}}'
+
+# General location that will be used for resources when needed
+Location: westeurope
+
+# The AVD ARM resources have their own resource parameter as not all Azure regions are available for the creation of these resources.
+AVDResourceLocation: westeurope
+
+# DomainObject that contains multiple properties.
+#   DomainFQDN: (string, mandatory): The fully qualified domain name
+#   OuPath: (string, mandatory): The OU path that will be used to join the VMs to
+#   DomainJoinIdentity: (string, mandatory): username of the admin account to join the VMs
+#   DomainJoinPassword: (string, mandatory): password of the admin account to join the VMs - will be filled in with token replacement task in the pipeline via a secure variable in variable group
+DomainObject:
+  DomainFQDN: aadds.gensio.com
+  OuPath: ""
+  DomainJoinIdentity: sys-wvdadmin@gensio.onmicrosoft.com
+  DomainJoinPassword: '{{domainJoinPassword}}'
+
+# LogAnalyticsObject that contains multiple properties.
+#   Name: (string, mandatory): Name of the log analytics workspace that will be used to join the VMs to
+#   ResourceGroupName: (string, mandatory): Name of the ResourceGroup where the log analytics workspace is located
+LogAnalyticsObject:
+  Name: Loganalyticstest
+  ResourceGroupName: rg
+
+# WorkspaceObject that contains multiple properties.
+#   Name: (string, mandatory): Name of the workspace within AVD
+#   ExistingRG: (bool, mandatory): 'True' if the RG already exists, 'False' if it needs to be created
+#   ResourceGroupName: (string, mandatory): Name of the ResourceGroup where you want to create the hostpool
+#   ResourceGroupTags: (object, optional): Tags that need to be added to the RG - only if the RG does not exist yet
+#   DisplayName: (string, mandatory): Displayname of the workspace within AVD
+#   Description: (string, mandatory): Description of the workspace within AVD
+WorkspaceObject:
+  Name: ws-prod-weu-001
+  ExistingRG: False
+  ResourceGroupName: rg-prod-weu-001
+  ResourceGroupTags:
+    TestTag: TestValue 
+  DisplayName: Development avd workspace
+  Description: Avd workspace deployed by DexBrix Terraform solution.
+
+# HostpoolObjectList contains multiple HostpoolObjects with multiple properties/arrays.
+# HostpoolObject has the following properties:
+#   Name: (string, mandatory): Name of the Hostpool
+#   ResourceGroupName: (string, mandatory): Name of the ResourceGroup where you want to create the hostpool
+#   ExistingRG: (bool, mandatory): 'True' if the RG already exists, 'False' if it needs to be created
+#   ResourceGroupTags: (object, optional): Tags that need to be added to the RG - only if the RG does not exist yet
+#   Displayname: (string, mandatory): Displayname of the hostpool
+#   Description: (string, mandatory): Description of the hostpool
+#   Max SessionLimit: (int, mandatory): Maximum of connections to the VMs in that hostpool
+#   LoadBalancerType: (string, mandatory): Type of Loadbalancer. 2 values are accepted: 'BreadthFirst' or 'DepthFirst'
+#   AvailabilitySetName: (string, mandatory): Name of the availability set
+#   ApplicationSecurityGroupName: (string, mandatory): Name of the application security group
+#   ApplicationGroupObjectList: contains multiple ApplicationGroupObjects with multiple properties/arrays.
+#     ApplicationGroupObject has the following properties:
+#     Name: (string, mandatory): Name of the applicationgroup
+#     DisplayName: (string, mandatory): Displayname of the applicationgroup
+#     Description: (string, mandatory): Description of the applicationgroup
+#     Type: (string, mandatory): Type of the applicationgroup. 2 values are accepted: 'Desktop' (only one) or 'RemoteApp'
+#     AssignmentList: (list of strings, optional): Contains (multiple) ObjectID(s) of AAD users/groups to assign to the corresponding ApplicationGroupObject. It needs to be the objectID of the AAD user/group (it can't be the userprincipalname).
+#   SessionHostObject has the following properties:
+#     SessionHostImageResourceId: (string, optional): ResourceID of the shared image for all the VMs in the SessionHostObject. It can be overrided per VM by adding the property to the SessionHostObject in SessionHostList.
+#     SessionHostAdminUserName: (string, optional): Admin account name of the VMs when created
+#     SessionHostAdminPassword: (string, optional): Admin account password - will be filled in with token replacement task in the pipeline via a secure variable in variable group
+#     SubnetResourceId: (string, mandatory): ResourceID of the Subnet of the VMs
+#     SessionHostOSDiskSize: (int, mandatory): OS Disksize of all the VMs. It can be overrided per VM by adding the property to the SessionHostObject in SessionHostList.
+#     SessionHostList contains multiple SessionHostObjects with multiple properties/arrays.
+#       SessionHostObject in SessionHostList has the following properties:
+#       VirtualMachineName: (string, mandatory): Name of the VM
+#       NetworkInterfaceName: (string, mandatory): Name of the networkinterface connected to the VM.
+#       VirtualMachineImageResourceId: (string, optional): ResourceID of the shared image for this VM. This will override the SessionHostImageResourceId
+#       VirtualMachinesize: (string, mandatory): Size of the VM
+#       VirtualMachineOSDiskSize: (int, optional): OS Disksize of the VM. This will override the SessionHostOSDiskSize
+#       AdminUserName: (string, optional): Admin account name of the VMs when created
+#       AdminPassword: (string, optional): Admin account password - will be filled in with token replacement task in the pipeline via a secure variable in variable group
+HostpoolObjectList:
+  - Name: hp-prod-weu-001
+    ResourceGroupName: rg-prod-weu-001
+    ExistingRG: false
+    DisplayName: Development hostpool 1
+    Description: Hostpool deployed by DexBrix Terraform solution.
+    MaxSessionLimit: 5
+    LoadBalancerType: BreadthFirst
+    AvailabilitySetName: as-prod-weu-001
+    ApplicationSecurityGroupName: asg-prod-weu-001
+    ApplicationGroupList:
+      - Name: ag-prod-weu-001
+        DisplayName: Development desktop application
+        Description: Desktop application group deployed by DexBrix Terraform solution.
+        Type: Desktop
+        AssignmentList:
+          - 202e2da5-8aae-4c07-8045-11ab90f03e4b
+          - 2d238479-80c9-4889-9d35-736531918a6f
+    SessionHostObject:
+      SessionHostImageResourceId: /subscriptions/24380b0f-fd35-4966-816d-649e26aef48a/resourceGroups/rg/providers/Microsoft.Compute/galleries/igalimagegalleryprd01/images/w11
+      SessionHostAdminUserName: sysadmin
+      SessionHostAdminPassword: '{{sessionHostPassword}}'  
+      SubnetResourceId: /subscriptions/24380b0f-fd35-4966-816d-649e26aef48a/resourceGroups/rg/providers/Microsoft.Network/virtualNetworks/aadds-vnet/subnets/aadds-subnet
+      SessionHostOSDiskSize: 128
+      SessionHostList:
+        - VirtualMachineName: vm-prod-weu-001
+          VirtualMachineImagePublisher: MicrosoftWindowsDesktop
+          VirtualMachineImageOffer: windows-11
+          VirtualMachineImageSku: win11-22h2-avd
+          NetworkInterfaceName: nic-prod-weu-001
+          VirtualMachineSize: Standard_DS2_v2
+        # - VirtualMachineName: teravdvm02hp01
+        #   NetworkInterfaceName: terraform-avd-nic-01-teravdvm02hp01
+        #   VirtualMachineSize: Standard_DS2_v2
+        # - VirtualMachineName: teravdvm03hp01
+        #   NetworkInterfaceName: terraform-avd-nic-01-teravdvm03hp01
+        #   VirtualMachineSize: Standard_DS2_v2
+
+
+  # - Name: terra-avd-hostpool-02
+  #   ResourceGroupName: rg-avdterra-hp-02-dev
+  #   ExistingRG: false
+  #   DisplayName: Development hostpool 2
+  #   Description: Hostpool deployed by DexBrix Terraform solution.
+  #   MaxSessionLimit: 5
+  #   LoadBalancerType: BreadthFirst
+  #   AvailabilitySetName: terra-avd-avs-01
+  #   ApplicationSecurityGroupName: asg-terra-avd
+  #   ApplicationGroupList:
+  #     - Name: terra-avd-appgroup-desktop-0201
+  #       DisplayName: Development desktop application
+  #       Description: Desktop application group deployed by DexBrix Terraform solution.
+  #       Type: Desktop
+  #       AssignmentList:
+  #         - 202e2da5-8aae-4c07-8045-11ab90f03e4b
+  #         - 2d238479-80c9-4889-9d35-736531918a6f  
+  #     - Name: terra-avd-appgroup-testapp-0201
+  #       DisplayName: Development test application
+  #       Description: Application group deployed by DexBrix Terraform solution.
+  #       Type: RemoteApp
+  #   SessionHostObject:
+  #     SessionHostImageResourceId: /subscriptions/ddb43d3d-1eca-4a9c-bd02-ce2c9364c88b/resourceGroups/rg-dev-avd-images/providers/Microsoft.Compute/galleries/igalimagegalleryprd01/images/igal-win10-en-prd
+  #     SessionHostAdminUserName: sysadmin
+  #     SessionHostAdminPassword: '{{sessionHostPassword}}'  
+  #     SubnetResourceId: /subscriptions/ddb43d3d-1eca-4a9c-bd02-ce2c9364c88b/resourceGroups/ge-rgp-prd-aadds-01/providers/Microsoft.Network/virtualNetworks/ge-aadds-vnet-prd-westeurope-01/subnets/ge-aadds-snet-10-7-0-0-26
+  #     SessionHostOSDiskSize: 128
+  #     SessionHostList:
+  #       - VirtualMachineName: traavdvm01hp02
+  #         NetworkInterfaceName: terra-avd-nic-01-traavdvm01hp02
+  #         VirtualMachineSize: Standard_DS2_v2
+  #       # - VirtualMachineName: teravdvm02hp02
+  #       #   NetworkInterfaceName: terraform-avd-nic-01-teravdvm02hp02
+  #       #   VirtualMachineSize: Standard_DS2_v2

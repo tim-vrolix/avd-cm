@@ -1,0 +1,158 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Terraform apply
+env:
+  TERRAFORMSTATERESOURCEGROUP_DEV: "rg"
+  BACKENDAZURERMSUB_DEV: "24380b0f-fd35-4966-816d-649e26aef48a" #cmc-platform-management
+  BACKENDAZURERMSTORAGEACCOUNTNAME_DEV: "terraform154"
+  BACKENDAZURERMCONTAINERNAME_DEV: "tfstate-dev"
+  # DEPLOYMENT_MG_CMC: "mg-cmc"
+  # DEPLOYMENT_MG_IDENTITY: "mg-identity"
+  # DEPLOYMENT_MG_LANDING_ZONES: "mg-landing-zones"
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "The Azure environment to target for the deployment."
+        required: true
+        type: choice
+        options:
+          - "dev"
+          - "prd"
+
+        default: "dev"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: ${{ inputs.environment }}
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v3
+      - name: Set environment variables for environment ${{ env.ENVIRONMENT }}
+        id: setenvs
+        run: |
+          if [[ ${{ env.ENVIRONMENT }} == "mg-cmc" ]]; then
+            echo "Setting environment variables for mg-cmc deployment.."
+            echo "TERRAFORMSTATERESOURCEGROUP=${{ env.TERRAFORMSTATERESOURCEGROUP_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSUB=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSTORAGEACCOUNTNAME=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMCONTAINERNAME=${{ env.BACKENDAZURERMCONTAINERNAME_DEV }}" >> $GITHUB_ENV
+            echo "TERRAFORMSTATEFILENAME=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
+            echo "DEPLOYMENTSUBSCRIPTION=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
+          elif [[ ${{ env.ENVIRONMENT }} == "mg-identity" ]]; then
+            echo "Setting environment variables for mg-identity deployment.."
+            echo "TERRAFORMSTATERESOURCEGROUP=${{ env.TERRAFORMSTATERESOURCEGROUP_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSUB=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSTORAGEACCOUNTNAME=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMCONTAINERNAME=${{ env.BACKENDAZURERMCONTAINERNAME_DEV }}" >> $GITHUB_ENV
+            echo "TERRAFORMSTATEFILENAME=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
+            echo "DEPLOYMENTSUBSCRIPTION=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
+          elif [[ ${{ env.ENVIRONMENT }} == "mg-landing-zones" ]]; then
+            echo "Setting environment variables for mg-landing-zones deployment.."
+            echo "TERRAFORMSTATERESOURCEGROUP=${{ env.TERRAFORMSTATERESOURCEGROUP_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSUB=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSTORAGEACCOUNTNAME=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMCONTAINERNAME=${{ env.BACKENDAZURERMCONTAINERNAME_DEV }}" >> $GITHUB_ENV
+            echo "TERRAFORMSTATEFILENAME=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
+            echo "DEPLOYMENTSUBSCRIPTION=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
+          else
+            echo "Chosen environment ${{ env.ENVIRONMENT }} is not supported. Exiting."
+            exit 1
+          fi
+    outputs:
+      ENVIRONMENT: ${{ env.ENVIRONMENT }}
+      TERRAFORMSTATERESOURCEGROUP: ${{ env.TERRAFORMSTATERESOURCEGROUP }}
+      BACKENDAZURERMSUB: ${{ env.BACKENDAZURERMSUB }}
+      BACKENDAZURERMSTORAGEACCOUNTNAME: ${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME }}
+      BACKENDAZURERMCONTAINERNAME: ${{ env.BACKENDAZURERMCONTAINERNAME }}
+      TERRAFORMSTATEFILENAME: ${{ env.TERRAFORMSTATEFILENAME }}
+      DEPLOYMENTSUBSCRIPTION: ${{ env.DEPLOYMENTSUBSCRIPTION }}
+
+  ValidateBackend:
+    runs-on: ubuntu-latest
+    needs: Build
+    env:
+      ENVIRONMENT: ${{ needs.Build.outputs.ENVIRONMENT }}
+      TERRAFORMSTATERESOURCEGROUP: ${{ needs.Build.outputs.TERRAFORMSTATERESOURCEGROUP }}
+      BACKENDAZURERMSUB: ${{ needs.Build.outputs.BACKENDAZURERMSUB }}
+      BACKENDAZURERMSTORAGEACCOUNTNAME: ${{ needs.Build.outputs.BACKENDAZURERMSTORAGEACCOUNTNAME }}
+      TERRAFORMSTATEFILENAME: ${{ needs.Build.outputs.TERRAFORMSTATEFILENAME }}
+      DEPLOYMENTSUBSCRIPTION: ${{ needs.Build.outputs.DEPLOYMENTSUBSCRIPTION }}
+      BACKENDAZURERMCONTAINERNAME: ${{ needs.Build.outputs.BACKENDAZURERMCONTAINERNAME }}
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v3
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.BACKENDAZURERMSUB_DEV }}
+      - name: Set PAL for service principal
+        uses: Azure/cli@v1
+        with:
+          inlineScript: |
+            az extension add --name managementpartner -y
+            if [[ $(az managementpartner show ) ]]; then
+                echo "Updating partner ID.."
+                az managementpartner update --partner-id 4973165
+            else
+                echo "Setting new partner ID.."
+                az managementpartner create --partner-id 4973165
+            fi
+      - name: Check for Terraform state container
+        uses: azure/CLI@v1
+        with:
+          azcliversion: 2.30.0
+          inlineScript: |
+            echo "ACCOUNT_KEY=$(az storage account keys list --resource-group ${{ env.TERRAFORMSTATERESOURCEGROUP }} --account-name ${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME }} --query '[0].value' -o tsv)" >> $GITHUB_ENV
+    outputs:
+      ACCOUNT_KEY: ${{ env.ACCOUNT_KEY }}
+  Apply:
+    runs-on: ubuntu-latest
+    needs:
+      - Build
+      - ValidateBackend
+    env:
+      ENVIRONMENT: ${{ needs.Build.outputs.ENVIRONMENT }}
+      TERRAFORMSTATERESOURCEGROUP: ${{ needs.Build.outputs.TERRAFORMSTATERESOURCEGROUP }}
+      BACKENDAZURERMSUB: ${{ needs.Build.outputs.BACKENDAZURERMSUB }}
+      BACKENDAZURERMSTORAGEACCOUNTNAME: ${{ needs.Build.outputs.BACKENDAZURERMSTORAGEACCOUNTNAME }}
+      TERRAFORMSTATEFILENAME: ${{ needs.Build.outputs.TERRAFORMSTATEFILENAME }}
+      BACKENDAZURERMCONTAINERNAME: ${{ needs.Build.outputs.BACKENDAZURERMCONTAINERNAME }}
+      DEPLOYMENTSUBSCRIPTION: ${{ needs.Build.outputs.DEPLOYMENTSUBSCRIPTION }}
+      ACCOUNT_KEY: ${{ needs.ValidateBackend.outputs.ACCOUNT_KEY }}
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v3
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.BACKENDAZURERMSUB_DEV }}
+      - name: Install Terraform version 1.8.3
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.8.3
+      - name: Replace tokens in main file for deployment subscription in ${{ env.ENVIRONMENT }} and parameterfile
+        uses: cschleiden/replace-tokens@v1
+        with:
+          files: '["main.tf","Main-Parameters-${{ env.ENVIRONMENT }}.tfvars"]'
+        env:
+          subscription_id: ${{ env.DEPLOYMENTSUBSCRIPTION }}
+      - name: Terraform Init
+        id: init
+        run: terraform init -backend-config="resource_group_name=${{ env.TERRAFORMSTATERESOURCEGROUP }}" -backend-config="tenant_id=${{ secrets.AZURE_TENANT_ID}}" -backend-config="client_id=${{ secrets.AZURE_CLIENT_ID }}" -backend-config="subscription_id=${{ env.BACKENDAZURERMSUB_DEV }}" -backend-config="use_oidc=true" -backend-config="storage_account_name=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME }}" -backend-config="container_name=${{ env.BACKENDAZURERMCONTAINERNAME }}" -backend-config="access_key=${{ env.ACCOUNT_KEY }}" -backend-config="key=${{ env.TERRAFORMSTATEFILENAME }}"
+      - name: Terraform validate
+        id: validate
+        run: terraform validate
+      - name: Terraform apply
+        id: apply
+        run: terraform apply --var-file=Main-Parameters-${{ env.ENVIRONMENT }}.tfvars --auto-approve

@@ -1,0 +1,171 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Terraform plan
+env:
+  TERRAFORMSTATERESOURCEGROUP_DEV: "rg-cmc-terraform-01"
+  BACKENDAZURERMSUB_DEV: "6b48ccdc-aba6-4f46-b80f-e0fa19afe53b" #cmc-platform-management
+  BACKENDAZURERMSTORAGEACCOUNTNAME_DEV: "cmcterraform0001"
+  BACKENDAZURERMCONTAINERNAME_DEV: "terraform"
+  DEPLOYMENT_SUBSCRIPTION_PLATFORM_CONNECTIVITY: "a6c0a9cb-a11f-4725-9505-d18216d14959"
+  DEPLOYMENT_SUBSCRIPTION_PLATFORM_IDENTITY: "46ad2090-5614-4c4d-8792-944fbcf8e56a"
+  DEPLOYMENT_SUBSCRIPTION_DACE_PROD: "659e0c9c-76a4-46fb-9773-fa8009e68693"
+  DEPLOYMENT_SUBSCRIPTION_DACE_NONPROD: "a7eba7dd-9b95-463c-9996-f70133578d50"
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "The Azure environment to target for the deployment."
+        required: true
+        type: choice
+        options:
+          #Platform
+          - "cmc-platform-connectivity"
+          - "cmc-platform-identity"
+          #Landingszones
+          - "cmc-dace-nonprod"
+          - "cmc-dace-prod"
+
+        default: "cmc-platform-connectivity"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: ${{ inputs.environment }}
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v3
+      - name: Set environment variables for environment ${{ env.ENVIRONMENT }}
+        id: setenvs
+        run: |
+          if [[ ${{ env.ENVIRONMENT }} == "cmc-platform-connectivity" ]]; then
+            echo "Setting environment variables for cmc-platform-connectivity deployment.."
+            echo "TERRAFORMSTATERESOURCEGROUP=${{ env.TERRAFORMSTATERESOURCEGROUP_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSUB=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSTORAGEACCOUNTNAME=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMCONTAINERNAME=${{ env.BACKENDAZURERMCONTAINERNAME_DEV }}" >> $GITHUB_ENV
+            echo "TERRAFORMSTATEFILENAME=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
+            echo "DEPLOYMENTSUBSCRIPTION=${{ env.DEPLOYMENT_SUBSCRIPTION_PLATFORM_CONNECTIVITY }}" >> $GITHUB_ENV
+          elif [[ ${{ env.ENVIRONMENT }} == "cmc-platform-identity" ]]; then
+            echo "Setting environment variables for cmc-platform-identity deployment.."
+            echo "TERRAFORMSTATERESOURCEGROUP=${{ env.TERRAFORMSTATERESOURCEGROUP_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSUB=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSTORAGEACCOUNTNAME=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMCONTAINERNAME=${{ env.BACKENDAZURERMCONTAINERNAME_DEV }}" >> $GITHUB_ENV
+            echo "TERRAFORMSTATEFILENAME=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
+            echo "DEPLOYMENTSUBSCRIPTION=${{ env.DEPLOYMENT_SUBSCRIPTION_PLATFORM_IDENTITY }}" >> $GITHUB_ENV
+          elif [[ ${{ env.ENVIRONMENT }} == "cmc-dace-nonprod" ]]; then
+            echo "Setting environment variables for cmc-dace-nonprod deployment.."
+            echo "TERRAFORMSTATERESOURCEGROUP=${{ env.TERRAFORMSTATERESOURCEGROUP_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSUB=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSTORAGEACCOUNTNAME=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMCONTAINERNAME=${{ env.BACKENDAZURERMCONTAINERNAME_DEV }}" >> $GITHUB_ENV
+            echo "TERRAFORMSTATEFILENAME=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
+            echo "DEPLOYMENTSUBSCRIPTION=${{ env.DEPLOYMENT_SUBSCRIPTION_DACE_NONPROD }}" >> $GITHUB_ENV
+          elif [[ ${{ env.ENVIRONMENT }} == "cmc-dace-prod" ]]; then
+            echo "Setting environment variables for cmc-dace-prod deployment.."
+            echo "TERRAFORMSTATERESOURCEGROUP=${{ env.TERRAFORMSTATERESOURCEGROUP_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSUB=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSTORAGEACCOUNTNAME=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMCONTAINERNAME=${{ env.BACKENDAZURERMCONTAINERNAME_DEV }}" >> $GITHUB_ENV
+            echo "TERRAFORMSTATEFILENAME=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
+            echo "DEPLOYMENTSUBSCRIPTION=${{ env.DEPLOYMENT_SUBSCRIPTION_DACE_PROD }}" >> $GITHUB_ENV
+          else
+            echo "Chosen environment ${{ env.ENVIRONMENT }} is not supported. Exiting."
+            exit 1
+          fi
+    outputs:
+      ENVIRONMENT: ${{ env.ENVIRONMENT }}
+      TERRAFORMSTATERESOURCEGROUP: ${{ env.TERRAFORMSTATERESOURCEGROUP }}
+      BACKENDAZURERMSUB: ${{ env.BACKENDAZURERMSUB }}
+      BACKENDAZURERMSTORAGEACCOUNTNAME: ${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME }}
+      BACKENDAZURERMCONTAINERNAME: ${{ env.BACKENDAZURERMCONTAINERNAME }}
+      TERRAFORMSTATEFILENAME: ${{ env.TERRAFORMSTATEFILENAME }}
+      DEPLOYMENTSUBSCRIPTION: ${{ env.DEPLOYMENTSUBSCRIPTION }}
+
+  ValidateBackend:
+    runs-on: ubuntu-latest
+    needs: Build
+    env:
+      ENVIRONMENT: ${{ needs.Build.outputs.ENVIRONMENT }}
+      TERRAFORMSTATERESOURCEGROUP: ${{ needs.Build.outputs.TERRAFORMSTATERESOURCEGROUP }}
+      BACKENDAZURERMSUB: ${{ needs.Build.outputs.BACKENDAZURERMSUB }}
+      BACKENDAZURERMSTORAGEACCOUNTNAME: ${{ needs.Build.outputs.BACKENDAZURERMSTORAGEACCOUNTNAME }}
+      TERRAFORMSTATEFILENAME: ${{ needs.Build.outputs.TERRAFORMSTATEFILENAME }}
+      DEPLOYMENTSUBSCRIPTION: ${{ needs.Build.outputs.DEPLOYMENTSUBSCRIPTION }}
+      BACKENDAZURERMCONTAINERNAME: ${{ needs.Build.outputs.BACKENDAZURERMCONTAINERNAME }}
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v3
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.BACKENDAZURERMSUB_DEV }}
+      - name: Set PAL for service principal
+        uses: Azure/cli@v1
+        with:
+          inlineScript: |
+            az extension add --name managementpartner -y
+            if [[ $(az managementpartner show ) ]]; then
+                echo "Updating partner ID.."
+                az managementpartner update --partner-id 4973165
+            else
+                echo "Setting new partner ID.."
+                az managementpartner create --partner-id 4973165
+            fi
+      - name: Check for Terraform state container
+        uses: azure/CLI@v1
+        with:
+          azcliversion: 2.30.0
+          inlineScript: |
+            echo "ACCOUNT_KEY=$(az storage account keys list --resource-group ${{ env.TERRAFORMSTATERESOURCEGROUP }} --account-name ${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME }} --query '[0].value' -o tsv)" >> $GITHUB_ENV
+    outputs:
+      ACCOUNT_KEY: ${{ env.ACCOUNT_KEY }}
+  Apply:
+    runs-on: ubuntu-latest
+    needs:
+      - Build
+      - ValidateBackend
+    env:
+      ENVIRONMENT: ${{ needs.Build.outputs.ENVIRONMENT }}
+      TERRAFORMSTATERESOURCEGROUP: ${{ needs.Build.outputs.TERRAFORMSTATERESOURCEGROUP }}
+      BACKENDAZURERMSUB: ${{ needs.Build.outputs.BACKENDAZURERMSUB }}
+      BACKENDAZURERMSTORAGEACCOUNTNAME: ${{ needs.Build.outputs.BACKENDAZURERMSTORAGEACCOUNTNAME }}
+      TERRAFORMSTATEFILENAME: ${{ needs.Build.outputs.TERRAFORMSTATEFILENAME }}
+      BACKENDAZURERMCONTAINERNAME: ${{ needs.Build.outputs.BACKENDAZURERMCONTAINERNAME }}
+      DEPLOYMENTSUBSCRIPTION: ${{ needs.Build.outputs.DEPLOYMENTSUBSCRIPTION }}
+      ACCOUNT_KEY: ${{ needs.ValidateBackend.outputs.ACCOUNT_KEY }}
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v3
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.BACKENDAZURERMSUB_DEV }}
+      - name: Install Terraform version 1.8.3
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.8.3
+      - name: Replace tokens in main file for deployment subscription in ${{ env.ENVIRONMENT }} and parameterfile
+        uses: cschleiden/replace-tokens@v1
+        with:
+          files: '["main.tf","Main-Parameters-${{ env.ENVIRONMENT }}.tfvars"]'
+        env:
+          subscription_id: ${{ env.DEPLOYMENTSUBSCRIPTION }}
+      - name: Terraform Init
+        id: init
+        run: terraform init -backend-config="resource_group_name=${{ env.TERRAFORMSTATERESOURCEGROUP }}" -backend-config="tenant_id=${{ secrets.AZURE_TENANT_ID}}" -backend-config="client_id=${{ secrets.AZURE_CLIENT_ID }}" -backend-config="subscription_id=${{ env.BACKENDAZURERMSUB_DEV }}" -backend-config="use_oidc=true" -backend-config="storage_account_name=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME }}" -backend-config="container_name=${{ env.BACKENDAZURERMCONTAINERNAME }}" -backend-config="access_key=${{ env.ACCOUNT_KEY }}" -backend-config="key=${{ env.TERRAFORMSTATEFILENAME }}"
+      - name: Terraform validate
+        id: validate
+        run: terraform validate
+      - name: Terraform plan
+        id: plan
+        run: terraform plan --var-file=Main-Parameters-${{ env.ENVIRONMENT }}.tfvars --auto-approve
