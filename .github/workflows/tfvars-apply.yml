@@ -37,8 +37,8 @@ jobs:
       - name: Set environment variables for environment ${{ env.ENVIRONMENT }}
         id: setenvs
         run: |
-          if [[ ${{ env.ENVIRONMENT }} == "mg-cmc" ]]; then
-            echo "Setting environment variables for mg-cmc deployment.."
+          if [[ ${{ env.ENVIRONMENT }} == "dev" ]]; then
+            echo "Setting environment variables for dev deployment.."
             echo "TERRAFORMSTATERESOURCEGROUP=${{ env.TERRAFORMSTATERESOURCEGROUP_DEV }}" >> $GITHUB_ENV
             echo "BACKENDAZURERMSUB=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
             echo "BACKENDAZURERMSTORAGEACCOUNTNAME=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME_DEV }}" >> $GITHUB_ENV
