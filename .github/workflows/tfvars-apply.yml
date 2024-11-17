@@ -6,7 +6,7 @@ env:
   BACKENDAZURERMSUB_DEV: "24380b0f-fd35-4966-816d-649e26aef48a" #cmc-platform-management
   BACKENDAZURERMSTORAGEACCOUNTNAME_DEV: "terraform154"
   BACKENDAZURERMCONTAINERNAME_DEV: "tfstate-dev"
-  DEPLOYMENTSUBSCRIPTION: "24380b0f-fd35-4966-816d-649e26aef48a"
+  DEPLOYMENT_SUBSCRIPTION_DEV: "24380b0f-fd35-4966-816d-649e26aef48a"
 on:
   workflow_dispatch:
     inputs:
@@ -15,8 +15,8 @@ on:
         required: true
         type: choice
         options:
+          #Platform
           - "dev"
-          - "prd"
 
         default: "dev"
 
@@ -42,7 +42,39 @@ jobs:
             echo "BACKENDAZURERMSTORAGEACCOUNTNAME=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME_DEV }}" >> $GITHUB_ENV
             echo "BACKENDAZURERMCONTAINERNAME=${{ env.BACKENDAZURERMCONTAINERNAME_DEV }}" >> $GITHUB_ENV
             echo "TERRAFORMSTATEFILENAME=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
-            echo "DEPLOYMENTSUBSCRIPTION=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
+            echo "DEPLOYMENTSUBSCRIPTION=${{ env.DEPLOYMENT_SUBSCRIPTION_PLATFORM_CONNECTIVITY }}" >> $GITHUB_ENV
+          elif [[ ${{ env.ENVIRONMENT }} == "cmc-platform-identity" ]]; then
+            echo "Setting environment variables for cmc-platform-identity deployment.."
+            echo "TERRAFORMSTATERESOURCEGROUP=${{ env.TERRAFORMSTATERESOURCEGROUP_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSUB=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSTORAGEACCOUNTNAME=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMCONTAINERNAME=${{ env.BACKENDAZURERMCONTAINERNAME_DEV }}" >> $GITHUB_ENV
+            echo "TERRAFORMSTATEFILENAME=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
+            echo "DEPLOYMENTSUBSCRIPTION=${{ env.DEPLOYMENT_SUBSCRIPTION_DEV }}" >> $GITHUB_ENV
+          elif [[ ${{ env.ENVIRONMENT }} == "cmc-dace-nonprod" ]]; then
+            echo "Setting environment variables for cmc-dace-nonprod deployment.."
+            echo "TERRAFORMSTATERESOURCEGROUP=${{ env.TERRAFORMSTATERESOURCEGROUP_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSUB=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSTORAGEACCOUNTNAME=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMCONTAINERNAME=${{ env.BACKENDAZURERMCONTAINERNAME_DEV }}" >> $GITHUB_ENV
+            echo "TERRAFORMSTATEFILENAME=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
+            echo "DEPLOYMENTSUBSCRIPTION=${{ env.DEPLOYMENT_SUBSCRIPTION_DACE_NONPROD }}" >> $GITHUB_ENV
+          elif [[ ${{ env.ENVIRONMENT }} == "cmc-dace-prod" ]]; then
+            echo "Setting environment variables for cmc-dace-prod deployment.."
+            echo "TERRAFORMSTATERESOURCEGROUP=${{ env.TERRAFORMSTATERESOURCEGROUP_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSUB=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSTORAGEACCOUNTNAME=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMCONTAINERNAME=${{ env.BACKENDAZURERMCONTAINERNAME_DEV }}" >> $GITHUB_ENV
+            echo "TERRAFORMSTATEFILENAME=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
+            echo "DEPLOYMENTSUBSCRIPTION=${{ env.DEPLOYMENT_SUBSCRIPTION_DACE_PROD }}" >> $GITHUB_ENV
+          elif [[ ${{ env.ENVIRONMENT }} == "cmc-sharedservices-prod" ]]; then
+            echo "Setting environment variables for cmc-sharedservices-prod deployment.."
+            echo "TERRAFORMSTATERESOURCEGROUP=${{ env.TERRAFORMSTATERESOURCEGROUP_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSUB=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSTORAGEACCOUNTNAME=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME_DEV }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMCONTAINERNAME=${{ env.BACKENDAZURERMCONTAINERNAME_DEV }}" >> $GITHUB_ENV
+            echo "TERRAFORMSTATEFILENAME=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
+            echo "DEPLOYMENTSUBSCRIPTION=${{ env.DEPLOYMENT_SUBSCRIPTION_DACE_PROD }}" >> $GITHUB_ENV
           else
             echo "Chosen environment ${{ env.ENVIRONMENT }} is not supported. Exiting."
             exit 1
