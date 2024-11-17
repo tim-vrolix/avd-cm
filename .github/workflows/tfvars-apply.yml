@@ -6,9 +6,6 @@ env:
   BACKENDAZURERMSUB_DEV: "24380b0f-fd35-4966-816d-649e26aef48a" #cmc-platform-management
   BACKENDAZURERMSTORAGEACCOUNTNAME_DEV: "terraform154"
   BACKENDAZURERMCONTAINERNAME_DEV: "tfstate-dev"
-  # DEPLOYMENT_MG_CMC: "mg-cmc"
-  # DEPLOYMENT_MG_IDENTITY: "mg-identity"
-  # DEPLOYMENT_MG_LANDING_ZONES: "mg-landing-zones"
 on:
   workflow_dispatch:
     inputs:
@@ -39,22 +36,6 @@ jobs:
         run: |
           if [[ ${{ env.ENVIRONMENT }} == "dev" ]]; then
             echo "Setting environment variables for dev deployment.."
-            echo "TERRAFORMSTATERESOURCEGROUP=${{ env.TERRAFORMSTATERESOURCEGROUP_DEV }}" >> $GITHUB_ENV
-            echo "BACKENDAZURERMSUB=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
-            echo "BACKENDAZURERMSTORAGEACCOUNTNAME=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME_DEV }}" >> $GITHUB_ENV
-            echo "BACKENDAZURERMCONTAINERNAME=${{ env.BACKENDAZURERMCONTAINERNAME_DEV }}" >> $GITHUB_ENV
-            echo "TERRAFORMSTATEFILENAME=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
-            echo "DEPLOYMENTSUBSCRIPTION=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
-          elif [[ ${{ env.ENVIRONMENT }} == "mg-identity" ]]; then
-            echo "Setting environment variables for mg-identity deployment.."
-            echo "TERRAFORMSTATERESOURCEGROUP=${{ env.TERRAFORMSTATERESOURCEGROUP_DEV }}" >> $GITHUB_ENV
-            echo "BACKENDAZURERMSUB=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
-            echo "BACKENDAZURERMSTORAGEACCOUNTNAME=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME_DEV }}" >> $GITHUB_ENV
-            echo "BACKENDAZURERMCONTAINERNAME=${{ env.BACKENDAZURERMCONTAINERNAME_DEV }}" >> $GITHUB_ENV
-            echo "TERRAFORMSTATEFILENAME=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
-            echo "DEPLOYMENTSUBSCRIPTION=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
-          elif [[ ${{ env.ENVIRONMENT }} == "mg-landing-zones" ]]; then
-            echo "Setting environment variables for mg-landing-zones deployment.."
             echo "TERRAFORMSTATERESOURCEGROUP=${{ env.TERRAFORMSTATERESOURCEGROUP_DEV }}" >> $GITHUB_ENV
             echo "BACKENDAZURERMSUB=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
             echo "BACKENDAZURERMSTORAGEACCOUNTNAME=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME_DEV }}" >> $GITHUB_ENV
