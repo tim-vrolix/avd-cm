@@ -6,6 +6,7 @@ env:
   BACKENDAZURERMSUB_DEV: "24380b0f-fd35-4966-816d-649e26aef48a" #cmc-platform-management
   BACKENDAZURERMSTORAGEACCOUNTNAME_DEV: "terraform154"
   BACKENDAZURERMCONTAINERNAME_DEV: "tfstate-dev"
+  DEPLOYMENTSUBSCRIPTION: "24380b0f-fd35-4966-816d-649e26aef48a"
 on:
   workflow_dispatch:
     inputs:
