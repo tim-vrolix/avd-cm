@@ -2,7 +2,7 @@
 
 name: Terraform apply
 env:
-  PACK_NAME: xxx
+  PACK_NAME: "dev"
 
   TERRAFORMSTATERESOURCEGROUP_DEV: "rg"
   BACKENDAZURERMSUB_DEV: "24380b0f-fd35-4966-816d-649e26aef48a"
