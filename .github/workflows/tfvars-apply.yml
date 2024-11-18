@@ -1,10 +1,21 @@
+# This is a basic workflow to help you get started with Actions
+
 name: Terraform apply
 env:
+  PACK_NAME: xxx
+
   TERRAFORMSTATERESOURCEGROUP_DEV: "rg"
-  BACKENDAZURERMSUB_DEV: "24380b0f-fd35-4966-816d-649e26aef48a" #cmc-platform-management
+  BACKENDAZURERMSUB_DEV: "24380b0f-fd35-4966-816d-649e26aef48a"
   BACKENDAZURERMSTORAGEACCOUNTNAME_DEV: "terraform154"
   BACKENDAZURERMCONTAINERNAME_DEV: "tfstate-dev"
-  DEPLOYMENT_SUBSCRIPTION_DEV: "24380b0f-fd35-4966-816d-649e26aef48a"
+  TERRAFORMSTATEFILENAME_DEV: "dev"
+
+  # TERRAFORMSTATERESOURCEGROUP_PRD: xxx
+  # BACKENDAZURERMSUB_PRD: xxx
+  # BACKENDAZURERMSTORAGEACCOUNTNAME_PRD: xxx
+  # BACKENDAZURERMCONTAINERNAME_PRD: xxx
+  # TERRAFORMSTATEFILENAME_PRD: xxx
+
 on:
   workflow_dispatch:
     inputs:
@@ -13,12 +24,14 @@ on:
         required: true
         type: choice
         options:
-          #Platform
           - "dev"
+          - "prd"
         default: "dev"
+
 permissions:
   id-token: write
   contents: read
+
 jobs:
   Build:
     runs-on: ubuntu-latest
@@ -31,17 +44,33 @@ jobs:
         id: setenvs
         run: |
           if [[ ${{ env.ENVIRONMENT }} == "dev" ]]; then
-            echo "Setting environment variables for dev deployment.."
+            echo "Setting environment variables for DEV deployment.."
             echo "TERRAFORMSTATERESOURCEGROUP=${{ env.TERRAFORMSTATERESOURCEGROUP_DEV }}" >> $GITHUB_ENV
             echo "BACKENDAZURERMSUB=${{ env.BACKENDAZURERMSUB_DEV }}" >> $GITHUB_ENV
             echo "BACKENDAZURERMSTORAGEACCOUNTNAME=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME_DEV }}" >> $GITHUB_ENV
             echo "BACKENDAZURERMCONTAINERNAME=${{ env.BACKENDAZURERMCONTAINERNAME_DEV }}" >> $GITHUB_ENV
-            echo "TERRAFORMSTATEFILENAME=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
-            echo "DEPLOYMENTSUBSCRIPTION=${{ env.DEPLOYMENT_SUBSCRIPTION_DEV }}" >> $GITHUB_ENV
+            echo "TERRAFORMSTATEFILENAME=${{ env.TERRAFORMSTATEFILENAME_DEV }}" >> $GITHUB_ENV
+          elif [[ ${{ env.ENVIRONMENT }} == "prd" ]]; then
+            echo "Setting environment variables for PRD deployment.."
+            echo "TERRAFORMSTATERESOURCEGROUP=${{ env.TERRAFORMSTATERESOURCEGROUP_PRD }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSUB=${{ env.BACKENDAZURERMSUB_PRD }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMSTORAGEACCOUNTNAME=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME_PRD }}" >> $GITHUB_ENV
+            echo "BACKENDAZURERMCONTAINERNAME=${{ env.BACKENDAZURERMCONTAINERNAME_PRD }}" >> $GITHUB_ENV
+            echo "TERRAFORMSTATEFILENAME=${{ env.TERRAFORMSTATEFILENAME_PRD }}" >> $GITHUB_ENV
           else
             echo "Chosen environment ${{ env.ENVIRONMENT }} is not supported. Exiting."
             exit 1
           fi
+      - name: setup python 3.8
+        uses: actions/setup-python@v4.0.0
+        with:
+          python-version: 3.8
+      - name: Install python packaging tools
+        run: python -m pip install --upgrade pip setuptools wheel
+      - name: Install yaml parsing requirements
+        run: pip install pykwalify==1.7.0 PyYAML==5.3.1
+      - name: Validate parameter file for environment ${{ env.ENVIRONMENT }}
+        run: python Convert-ParameterFile.py --parameter-file "Main-Parameters-${{ env.ENVIRONMENT }}.yml" --schema-file "Main-Parameters-Schema.yml"
     outputs:
       ENVIRONMENT: ${{ env.ENVIRONMENT }}
       TERRAFORMSTATERESOURCEGROUP: ${{ env.TERRAFORMSTATERESOURCEGROUP }}
@@ -49,7 +78,9 @@ jobs:
       BACKENDAZURERMSTORAGEACCOUNTNAME: ${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME }}
       BACKENDAZURERMCONTAINERNAME: ${{ env.BACKENDAZURERMCONTAINERNAME }}
       TERRAFORMSTATEFILENAME: ${{ env.TERRAFORMSTATEFILENAME }}
-      DEPLOYMENTSUBSCRIPTION: ${{ env.DEPLOYMENTSUBSCRIPTION }}
+      CLIENT_ID: ${{ env.CLIENT_ID }}
+      TENANT_ID: ${{ env.TENANT_ID }}
+      SUBSCRIPTION_ID: ${{ env.SUBSCRIPTION_ID }}
 
   ValidateBackend:
     runs-on: ubuntu-latest
@@ -60,7 +91,6 @@ jobs:
       BACKENDAZURERMSUB: ${{ needs.Build.outputs.BACKENDAZURERMSUB }}
       BACKENDAZURERMSTORAGEACCOUNTNAME: ${{ needs.Build.outputs.BACKENDAZURERMSTORAGEACCOUNTNAME }}
       TERRAFORMSTATEFILENAME: ${{ needs.Build.outputs.TERRAFORMSTATEFILENAME }}
-      DEPLOYMENTSUBSCRIPTION: ${{ needs.Build.outputs.DEPLOYMENTSUBSCRIPTION }}
       BACKENDAZURERMCONTAINERNAME: ${{ needs.Build.outputs.BACKENDAZURERMCONTAINERNAME }}
     steps:
       - name: checkout repo
@@ -70,7 +100,7 @@ jobs:
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ env.BACKENDAZURERMSUB_DEV }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: Set PAL for service principal
         uses: Azure/cli@v1
         with:
@@ -91,23 +121,11 @@ jobs:
             echo "ACCOUNT_KEY=$(az storage account keys list --resource-group ${{ env.TERRAFORMSTATERESOURCEGROUP }} --account-name ${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME }} --query '[0].value' -o tsv)" >> $GITHUB_ENV
     outputs:
       ACCOUNT_KEY: ${{ env.ACCOUNT_KEY }}
-
-  ConvertParameters:
-    runs-on: ubuntu-latest
-    needs: Build
-    steps:
-      - name: checkout repo
-        uses: actions/checkout@v3
-      - name: Convert YAML to TFVARS
-        run: |
-          python Convert-Parameterfile.py --parameter-file Main-Parameters-dev.yml --schema-file Main-Parameters-Schema.yml
-
   Apply:
     runs-on: ubuntu-latest
     needs:
       - Build
       - ValidateBackend
-      - ConvertParameters
     env:
       ENVIRONMENT: ${{ needs.Build.outputs.ENVIRONMENT }}
       TERRAFORMSTATERESOURCEGROUP: ${{ needs.Build.outputs.TERRAFORMSTATERESOURCEGROUP }}
@@ -115,33 +133,32 @@ jobs:
       BACKENDAZURERMSTORAGEACCOUNTNAME: ${{ needs.Build.outputs.BACKENDAZURERMSTORAGEACCOUNTNAME }}
       TERRAFORMSTATEFILENAME: ${{ needs.Build.outputs.TERRAFORMSTATEFILENAME }}
       BACKENDAZURERMCONTAINERNAME: ${{ needs.Build.outputs.BACKENDAZURERMCONTAINERNAME }}
-      DEPLOYMENTSUBSCRIPTION: ${{ needs.Build.outputs.DEPLOYMENTSUBSCRIPTION }}
       ACCOUNT_KEY: ${{ needs.ValidateBackend.outputs.ACCOUNT_KEY }}
+      ARM_CLIENT_ID: ${{ secrets[format('AZURE_CLIENT_ID_{0}', needs.Build.outputs.ENVIRONMENT )] }}
+      ARM_CLIENT_SECRET: ${{ secrets[format('AZURE_CLIENT_SECRET_{0}', needs.Build.outputs.ENVIRONMENT )] }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets[format('AZURE_SUBSCRIPTION_ID_{0}', needs.Build.outputs.ENVIRONMENT )] }}
+      ARM_TENANT_ID: ${{ secrets[format('AZURE_TENANT_ID_{0}', needs.Build.outputs.ENVIRONMENT )] }}
     steps:
       - name: checkout repo
         uses: actions/checkout@v3
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ env.BACKENDAZURERMSUB_DEV }}
-      - name: Install Terraform version 1.8.3
+      - name: Install Terraform version 1.3.4
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.8.3
-      - name: Replace tokens in main file for deployment subscription in ${{ env.ENVIRONMENT }} and parameterfile
-        uses: cschleiden/replace-tokens@v1
-        with:
-          files: '["main.tf","Main-Parameters-${{ env.ENVIRONMENT }}.tfvars"]'
-        env:
-          subscription_id: ${{ env.DEPLOYMENTSUBSCRIPTION }}
+          terraform_version: 1.3.4
       - name: Terraform Init
         id: init
-        run: terraform init -backend-config="resource_group_name=${{ env.TERRAFORMSTATERESOURCEGROUP }}" -backend-config="tenant_id=${{ secrets.AZURE_TENANT_ID}}" -backend-config="client_id=${{ secrets.AZURE_CLIENT_ID }}" -backend-config="subscription_id=${{ env.BACKENDAZURERMSUB_DEV }}" -backend-config="use_oidc=true" -backend-config="storage_account_name=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME }}" -backend-config="container_name=${{ env.BACKENDAZURERMCONTAINERNAME }}" -backend-config="access_key=${{ env.ACCOUNT_KEY }}" -backend-config="key=${{ env.TERRAFORMSTATEFILENAME }}"
+        run: terraform init -backend-config="resource_group_name=${{ env.TERRAFORMSTATERESOURCEGROUP }}" -backend-config="storage_account_name=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME }}" -backend-config="container_name=${{ env.BACKENDAZURERMCONTAINERNAME }}" -backend-config="access_key=${{ env.ACCOUNT_KEY }}" -backend-config="key=${{ env.TERRAFORMSTATEFILENAME }}"
+      - name: Replace tokens in variable file for environment ${{ env.ENVIRONMENT }}
+        uses: cschleiden/replace-tokens@v1.1
+        with:
+          tokenPrefix: "{{"
+          tokenSuffix: "}}"
+          files: '["variables.tf"]'
+        env:
+          parameterenv: ${{ env.ENVIRONMENT }}
       - name: Terraform validate
         id: validate
         run: terraform validate
       - name: Terraform apply
         id: apply
-        run: terraform apply --var
+        run: terraform apply --auto-approve
