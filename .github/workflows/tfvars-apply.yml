@@ -98,7 +98,7 @@ jobs:
     steps:
       - name: checkout repo
         uses: actions/checkout@v3
-      - name: Convert YAML to JSON
+      - name: Convert YAML to TFVARS
         run: |
           python Convert-Parameterfile.py --parameter-file Main-Parameters-dev.yml --schema-file Main-Parameters-Schema.yml
 
@@ -144,4 +144,4 @@ jobs:
         run: terraform validate
       - name: Terraform apply
         id: apply
-        run: terraform apply --var-file=Main-Parameters-${{ env.ENVIRONMENT }}.tfvars --auto-approve
+        run: terraform apply --var
