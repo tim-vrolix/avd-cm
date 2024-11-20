@@ -1,3 +1,5 @@
+# This is a basic workflow to help you get started with Actions
+
 name: Terraform apply
 env:
   PACK_NAME: "dev"
@@ -58,6 +60,7 @@ jobs:
           else
             echo "Chosen environment ${{ env.ENVIRONMENT }} is not supported. Exiting."
             exit 1
+          fi
       - name: setup python 3.8
         uses: actions/setup-python@v4.0.0
         with:
@@ -118,7 +121,6 @@ jobs:
             echo "ACCOUNT_KEY=$(az storage account keys list --resource-group ${{ env.TERRAFORMSTATERESOURCEGROUP }} --account-name ${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME }} --query '[0].value' -o tsv)" >> $GITHUB_ENV
     outputs:
       ACCOUNT_KEY: ${{ env.ACCOUNT_KEY }}
-
   Apply:
     runs-on: ubuntu-latest
     needs:
@@ -151,4 +153,18 @@ jobs:
           terraform_version: 1.3.4
       - name: Terraform Init
         id: init
-        run: terraform init -backend-config="resource_group_name=${{ env.TERRAFORMSTATERESOURCEGROUP }}" -backend-config="storage_account_name=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME }}" -backend-config="container_name=${{ env.BACKENDAZURERMCONTAINERNAME }}" -backend-config="access_key=${{ env.ACCOUNT_KEY }}" -backend-config="key=${{
+        run: terraform init -backend-config="resource_group_name=${{ env.TERRAFORMSTATERESOURCEGROUP }}" -backend-config="storage_account_name=${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME }}" -backend-config="container_name=${{ env.BACKENDAZURERMCONTAINERNAME }}" -backend-config="access_key=${{ env.ACCOUNT_KEY }}" -backend-config="key=${{ env.TERRAFORMSTATEFILENAME }}"
+      - name: Replace tokens in variable file for environment ${{ env.ENVIRONMENT }}
+        uses: cschleiden/replace-tokens@v1.1
+        with:
+          tokenPrefix: "{{"
+          tokenSuffix: "}}"
+          files: '["variables.tf"]'
+        env:
+          parameterenv: ${{ env.ENVIRONMENT }}
+      - name: Terraform validate
+        id: validate
+        run: terraform validate
+      - name: Terraform apply
+        id: apply
+        run: terraform apply --auto-approve
