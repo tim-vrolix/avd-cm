@@ -1,11 +1,20 @@
+# This is a basic workflow to help you get started with Actions
+
 name: Terraform apply
 env:
   PACK_NAME: "dev"
+
   TERRAFORMSTATERESOURCEGROUP_DEV: "rg"
   BACKENDAZURERMSUB_DEV: "24380b0f-fd35-4966-816d-649e26aef48a"
   BACKENDAZURERMSTORAGEACCOUNTNAME_DEV: "terraform154"
   BACKENDAZURERMCONTAINERNAME_DEV: "tfstate-dev"
   TERRAFORMSTATEFILENAME_DEV: "dev"
+
+  # TERRAFORMSTATERESOURCEGROUP_PRD: xxx
+  # BACKENDAZURERMSUB_PRD: xxx
+  # BACKENDAZURERMSTORAGEACCOUNTNAME_PRD: xxx
+  # BACKENDAZURERMCONTAINERNAME_PRD: xxx
+  # TERRAFORMSTATEFILENAME_PRD: xxx
 
 on:
   workflow_dispatch:
@@ -69,6 +78,9 @@ jobs:
       BACKENDAZURERMSTORAGEACCOUNTNAME: ${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME }}
       BACKENDAZURERMCONTAINERNAME: ${{ env.BACKENDAZURERMCONTAINERNAME }}
       TERRAFORMSTATEFILENAME: ${{ env.TERRAFORMSTATEFILENAME }}
+      CLIENT_ID: ${{ env.CLIENT_ID }}
+      TENANT_ID: ${{ env.TENANT_ID }}
+      SUBSCRIPTION_ID: ${{ env.SUBSCRIPTION_ID }}
 
   ValidateBackend:
     runs-on: ubuntu-latest
@@ -88,7 +100,7 @@ jobs:
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ env.BACKENDAZURERMSUB }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: Set PAL for service principal
         uses: Azure/cli@v1
         with:
@@ -109,7 +121,6 @@ jobs:
             echo "ACCOUNT_KEY=$(az storage account keys list --resource-group ${{ env.TERRAFORMSTATERESOURCEGROUP }} --account-name ${{ env.BACKENDAZURERMSTORAGEACCOUNTNAME }} --query '[0].value' -o tsv)" >> $GITHUB_ENV
     outputs:
       ACCOUNT_KEY: ${{ env.ACCOUNT_KEY }}
-
   Apply:
     runs-on: ubuntu-latest
     needs:
@@ -123,19 +134,19 @@ jobs:
       TERRAFORMSTATEFILENAME: ${{ needs.Build.outputs.TERRAFORMSTATEFILENAME }}
       BACKENDAZURERMCONTAINERNAME: ${{ needs.Build.outputs.BACKENDAZURERMCONTAINERNAME }}
       ACCOUNT_KEY: ${{ needs.ValidateBackend.outputs.ACCOUNT_KEY }}
-      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_CLIENT_ID: ${{ secrets[format('AZURE_CLIENT_ID_{0}', needs.Build.outputs.ENVIRONMENT )] }}
+      ARM_CLIENT_SECRET: ${{ secrets[format('AZURE_CLIENT_SECRET_{0}', needs.Build.outputs.ENVIRONMENT )] }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets[format('AZURE_SUBSCRIPTION_ID_{0}', needs.Build.outputs.ENVIRONMENT )] }}
+      ARM_TENANT_ID: ${{ secrets[format('AZURE_TENANT_ID_{0}', needs.Build.outputs.ENVIRONMENT )] }}
     steps:
       - name: checkout repo
         uses: actions/checkout@v3
       - name: Azure Login
-        uses: azure/login@v2
+        uses: azure/login@v1
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ env.BACKENDAZURERMSUB }}
       - name: Install Terraform version 1.3.4
         uses: hashicorp/setup-terraform@v2
         with:
