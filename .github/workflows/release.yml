@@ -67,9 +67,9 @@ jobs:
       - name: Azure Login
         uses: azure/login@v2
         with:
-          client-id: ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ sec.AZURE_CLIENT_ID }}
+          tenant-id: ${{ sec.AZURE_TENANT_ID }}
+          subscription-id: ${{ sec.AZURE_SUBSCRIPTION_ID }}
       # If token replacement is needed, uncomment following step
       # - name: Replace tokens for environment ${{ env.ENVIRONMENT }}
       #   uses: cschleiden/replace-tokens@v1.1
