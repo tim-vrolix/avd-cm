@@ -8,7 +8,6 @@ env:
   DEPLOYMENT_NAME: avd
   LOCATION: westeurope
   MANAGEMENT_GROUP_ID_DEV: test
-  MANAGEMENT_GROUP_ID_PRD: xxx
 
 on:
   workflow_dispatch:
@@ -19,7 +18,6 @@ on:
         description: The target environment for deployment
         options:
           - dev
-          - prd
         default: dev
 
 # Required for OpenID with federated login to Azure to work
