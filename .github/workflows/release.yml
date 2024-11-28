@@ -1,0 +1,147 @@
+# Following variables need to be provided in Github and a federated credential need to be configured on the application that is used to deploy
+# client-id: ${{ vars.AZURE_CLIENT_ID}}
+# tenant-id: ${{ vars.AZURE_TENANT_ID }}
+# subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+name: Deploy avd - Management Group Scope
+env:
+  DEPLOYMENT_NAME: avd
+  LOCATION: westeurope
+  MANAGEMENT_GROUP_ID_DEV: test
+  MANAGEMENT_GROUP_ID_PRD: xxx
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        required: true
+        description: The target environment for deployment
+        options:
+          - dev
+          - prd
+        default: dev
+
+# Required for OpenID with federated login to Azure to work
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+    #When deploying to a certain GitHub environment, uncomment the following line and check if the name of the github environment matches the name of the input parameter environment
+    # environment: ${{ inputs.environment }}
+    env:
+      ENVIRONMENT: ${{ inputs.environment }}
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v4
+      - name: Set environment variables for environment ${{ env.ENVIRONMENT }}
+        id: setenvs
+        run: |
+          if [[ ${{ env.ENVIRONMENT }} == "dev" ]]; then
+            echo "Setting environment variables for DEV deployment.."
+            echo "MANAGEMENT_GROUP_ID for dev: " ${{ env.MANAGEMENT_GROUP_ID_DEV }}
+            echo "MANAGEMENT_GROUP_ID=${{ env.MANAGEMENT_GROUP_ID_DEV }}" >> $GITHUB_ENV
+          elif [[ ${{ env.ENVIRONMENT }} == "prd" ]]; then
+            echo "Setting environment variables for PRD deployment.."
+            echo "MANAGEMENT_GROUP_ID for prd: " ${{ env.MANAGEMENT_GROUP_ID_PRD }}
+            echo "MANAGEMENT_GROUP_ID=${{ env.MANAGEMENT_GROUP_ID_PRD }}" >> $GITHUB_ENV
+          else
+            echo "Chosen environment ${{ env.ENVIRONMENT }} is not supported. Exiting."
+            exit 1
+          fi
+    outputs:
+      ENVIRONMENT: ${{ env.ENVIRONMENT }}
+      MANAGEMENT_GROUP_ID: ${{ env.MANAGEMENT_GROUP_ID }}
+  Validate:
+    runs-on: ubuntu-latest
+    #When deploying to a certain GitHub environment, uncomment the following line and check if the name of the github environment matches the name of the input parameter environment
+    # environment: ${{ inputs.environment }}
+    needs: Build
+    env:
+      ENVIRONMENT: ${{ needs.Build.outputs.ENVIRONMENT }}
+      MANAGEMENT_GROUP_ID: ${{ needs.Build.outputs.MANAGEMENT_GROUP_ID }}
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v4
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      # If token replacement is needed, uncomment following step
+      # - name: Replace tokens for environment ${{ env.ENVIRONMENT }}
+      #   uses: cschleiden/replace-tokens@v1.1
+      #   with:
+      #     tokenPrefix: "{{"
+      #     tokenSuffix: "}}"
+      #     files: Main-Parameters-${{ env.ENVIRONMENT }}.bicepparam
+      #   env:
+      #     EXAMPLESECRET: ${{ secrets.EXAMPLESECRET }}
+      - name: Validate deployment for environment ${{ env.ENVIRONMENT }}
+        uses: Azure/arm-deploy@v2
+        with:
+          scope: managementgroup
+          managementGroupId: ${{ env.MANAGEMENT_GROUP_ID }}
+          region: ${{ env.LOCATION }}
+          template: main.bicep
+          deploymentMode: Validate
+          deploymentName: ${{ env.DEPLOYMENT_NAME }}
+          parameters: Main-Parameters-${{ env.ENVIRONMENT }}.bicepparam
+          failOnStdErr: true
+
+  deploy:
+    runs-on: ubuntu-latest
+    #When deploying to a certain GitHub environment, uncomment the following line and check if the name of the github environment matches the name of the input parameter environment
+    # environment: ${{ inputs.environment }}
+    needs:
+      - Build
+      - Validate
+    env:
+      ENVIRONMENT: ${{ needs.Build.outputs.ENVIRONMENT }}
+      MANAGEMENT_GROUP_ID: ${{ needs.Build.outputs.MANAGEMENT_GROUP_ID }}
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v4
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Set PAL for service principal
+        uses: Azure/cli@v1
+        with:
+          inlineScript: |
+            az extension add --name managementpartner -y
+
+            if [[ $(az managementpartner show ) ]]; then
+                echo "Updating partner ID.."
+                az managementpartner update --partner-id 4973165
+            else
+                echo "Setting new partner ID.."
+                az managementpartner create --partner-id 4973165
+            fi
+      # If token replacement is needed, uncomment following step
+      # - name: Replace tokens for environment ${{ env.ENVIRONMENT }}
+      #   uses: cschleiden/replace-tokens@v1.1
+      #   with:
+      #     tokenPrefix: "{{"
+      #     tokenSuffix: "}}"
+      #     files: Main-Parameters-${{ env.ENVIRONMENT }}.bicepparam
+      #   env:
+      #     EXAMPLESECRET: ${{ secrets.EXAMPLESECRET }}
+      - name: Run deployment for environment ${{ env.ENVIRONMENT }}
+        uses: Azure/arm-deploy@v2
+        with:
+          scope: managementgroup
+          managementGroupId: ${{ env.MANAGEMENT_GROUP_ID }}
+          region: ${{ env.LOCATION }}
+          template: main.bicep
+          deploymentMode: Incremental
+          deploymentName: ${{ env.DEPLOYMENT_NAME }}
+          parameters: Main-Parameters-${{ env.ENVIRONMENT }}.bicepparam
+          failOnStdErr: true

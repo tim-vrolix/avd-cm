@@ -1,0 +1,4 @@
+/.github/CODEOWNERS @dexmach-internal/dexmach-internal-admin
+/.github/workflows/release.yml @dexmach-internal/dexmach-internal-maintain
+/.vscode/settings.json @dexmach-internal/dexmach-internal-maintain
+bicepconfig.json @dexmach-internal/dexmach-internal-maintain

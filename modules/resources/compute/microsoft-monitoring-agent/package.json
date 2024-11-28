@@ -1,0 +1,11 @@
+{
+  "name": "@iac-bicep-library/microsoft-monitoring-agent",
+  "scripts": {
+    "test": "echo Error: no test specified && exit 1"
+  },
+  "license": "ISC",
+  "description": "microsoft-monitoring-agent package",
+  "author": "DexMach",
+  "version": "1.1.0",
+  "repository": "https://github.com/dexmach-internal/iac-bicep-library/"
+}

@@ -1,0 +1,13 @@
+{
+  "[bicep]": {
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "files.insertFinalNewline": true,
+    "editor.formatOnSave": true
+  },
+  // https://code.visualstudio.com/docs/languages/markdown
+  "markdown.validate.enabled": true,
+  "markdown.suggest.paths.enabled": true,
+  "markdown.suggest.paths.includeWorkspaceHeaderCompletions": "onSingleOrDoubleHash",
+  "markdown.updateLinksOnFileMove.enabled": "always"
+}

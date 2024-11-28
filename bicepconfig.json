@@ -1,0 +1,127 @@
+{
+  // See https://aka.ms/bicep/config for more information on Bicep configuration options
+  // See https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/linter for more information on Bicep linter rules
+  // Press CTRL+SPACE/CMD+SPACE at any location to see Intellisense suggestions
+  "analyzers": {
+    "core": {
+      "rules": {
+        "adminusername-should-not-be-literal": {
+          "level": "warning"
+        },
+        "artifacts-parameters": {
+          "level": "warning"
+        },
+        "decompiler-cleanup": {
+          "level": "warning"
+        },
+        "explicit-values-for-loc-params": {
+          "level": "warning"
+        },
+        "max-asserts": {
+          "level": "error"
+        },
+        "max-outputs": {
+          "level": "error"
+        },
+        "max-params": {
+          "level": "error"
+        },
+        "max-resources": {
+          "level": "error"
+        },
+        "max-variables": {
+          "level": "error"
+        },
+        "nested-deployment-template-scoping": {
+          "level": "error"
+        },
+        "no-conflicting-metadata": {
+          "level": "warning"
+        },
+        "no-deployments-resources": {
+          "level": "warning"
+        },
+        "no-hardcoded-env-urls": {
+          "level": "info"
+        },
+        "no-hardcoded-location": {
+          "level": "warning"
+        },
+        "no-loc-expr-outside-params": {
+          "level": "warning"
+        },
+        "no-unnecessary-dependson": {
+          "level": "warning"
+        },
+        "no-unused-existing-resources": {
+          "level": "warning"
+        },
+        "no-unused-params": {
+          "level": "warning"
+        },
+        "no-unused-vars": {
+          "level": "warning"
+        },
+        "outputs-should-not-contain-secrets": {
+          "level": "error"
+        },
+        "prefer-interpolation": {
+          "level": "warning"
+        },
+        "prefer-unquoted-property-names": {
+          "level": "warning"
+        },
+        "protect-commandtoexecute-secrets": {
+          "level": "warning"
+        },
+        "secure-parameter-default": {
+          "level": "error"
+        },
+        "secure-params-in-nested-deploy": {
+          "level": "warning"
+        },
+        "secure-secrets-in-params": {
+          "level": "error"
+        },
+        "simplify-interpolation": {
+          "level": "error"
+        },
+        "simplify-json-null": {
+          "level": "error"
+        },
+        "use-parent-property": {
+          "level": "warning"
+        },
+        "use-recent-api-versions": {
+          "level": "warning"
+        },
+        "use-recent-module-versions": {
+          "level": "warning"
+        },
+        "use-resource-id-functions": {
+          "level": "warning"
+        },
+        "use-resource-symbol-reference": {
+          "level": "warning"
+        },
+        "use-safe-access": {
+          "level": "error"
+        },
+        "use-secure-value-for-secure-inputs": {
+          "level": "error"
+        },
+        "use-stable-resource-identifiers": {
+          "level": "error"
+        },
+        "use-stable-vm-image": {
+          "level": "warning"
+        }
+      }
+    }
+  },
+  "formatting": {
+    "insertFinalNewline": true,
+    "indentKind": "Space",
+    "indentSize": 2
+  }
+}
